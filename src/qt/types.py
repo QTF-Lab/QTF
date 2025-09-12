@@ -1,0 +1,145 @@
+"""
+Core data contracts used across the framework.
+
+These are lightweight, immutable dataclasses that define the shape of data
+as it moves through the system. They are intentionally simple and free of logic.
+"""
+
+from __future__ import annotations
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Optional, Dict, Literal
+
+
+@dataclass(frozen=True)
+class Bar:
+    """
+    Aggregated price/volume information over a fixed interval.
+
+    Used in backtests, features, and live streams for both equities and crypto.
+    """
+
+    ts_utc: datetime
+    symbol: str
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
+    interval: str  # see enums.Interval
+    venue: str  # exchange or market code
+    currency: Optional[str] = None
+    adj_close: Optional[float] = None
+    source: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class Trade:
+    """
+    A single market trade (tick-level).
+
+    Typically used for high-frequency strategies or microstructure research.
+    """
+
+    ts_utc: datetime
+    symbol: str
+    price: float
+    size: float
+    venue: str
+    trade_id: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class Quote:
+    """
+    Top-of-book quote (bid/ask) snapshot at a given time.
+
+    Used to measure spreads, slippage, and liquidity.
+    """
+
+    ts_utc: datetime
+    symbol: str
+    bid_px: float
+    bid_sz: float
+    ask_px: float
+    ask_sz: float
+    venue: str
+
+
+@dataclass(frozen=True)
+class Signal:
+    """
+    A numeric score expressing conviction for a symbol.
+
+    Produced by a strategy or factor. Higher/lower values imply stronger long/short bias.
+    """
+
+    ts_utc: datetime
+    symbol: str
+    value: float
+    source: str  # strategy/factor name
+
+
+@dataclass(frozen=True)
+class Order:
+    """
+    An instruction to buy or sell a security.
+
+    Created by the portfolio/risk layer, sent to broker adapters in live mode.
+    """
+
+    id: str
+    ts_utc: datetime
+    symbol: str
+    side: str  # see enums.Side
+    qty: float
+    type: str  # see enums.OrderType
+    limit_price: Optional[float] = None
+    time_in_force: Optional[str] = None  # see enums.TimeInForce
+    meta: Optional[Dict[str, str]] = None
+
+
+@dataclass(frozen=True)
+class Fill:
+    """
+    Confirmation that part or all of an order was executed.
+
+    Used to update positions and PnL.
+    """
+
+    order_id: str
+    ts_utc: datetime
+    symbol: str
+    qty: float
+    price: float
+    fee: float = 0.0
+    liquidity_flag: Optional[Literal["T", "M"]] = None  # Taker/Maker
+
+
+@dataclass(frozen=True)
+class Position:
+    """
+    Current holdings in a single symbol.
+
+    Tracks size, average price, and realized/unrealized PnL.
+    """
+
+    symbol: str
+    qty: float
+    avg_price: float
+    unrealized_pnl: float = 0.0
+    realized_pnl: float = 0.0
+
+
+@dataclass(frozen=True)
+class PortfolioSnapshot:
+    """
+    Snapshot of the portfolio state at a given timestamp.
+
+    Contains NAV, cash, and per-symbol positions.
+    """
+
+    ts_utc: datetime
+    nav: float
+    cash: float
+    positions: Dict[str, Position]
