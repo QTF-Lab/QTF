@@ -1,0 +1,9 @@
+data:
+  lake_root: "/mnt/data/lake"
+  default_storage: "parquet"
+
+calendar:
+  default: "XNAS"   # fallback calendar
+
+adjustments:
+  mode: "close"     # none|close|ohlc
