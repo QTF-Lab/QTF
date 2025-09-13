@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "A Quantitative Trading Framework"
 requires-python = ">=3.13"
 authors = [{ name = "Samuel Ahou", email = "samuelahou@hotmail.com" },
-           { name = "Qumars Sharifi", email = ""}]
+           { name = "Qumars Sharifi", email = "dev@qtf.invalid"}]
 
 [tool.black]
 line-length = 88
