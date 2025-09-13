@@ -8,9 +8,9 @@ __pycache__/
 venv/
 
 # Data/artifacts/logs
-data/
-artifacts/
-logs/
+./data/
+./artifacts/
+./logs/
 
 # IDE
 .vscode/

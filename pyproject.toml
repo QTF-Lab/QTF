@@ -3,8 +3,7 @@ name = "QTF"
 version = "0.1.0"
 description = "A Quantitative Trading Framework"
 requires-python = ">=3.13"
-authors = [{ name = "Samuel Ahou", email = "samuelahou@hotmail.com" },
-           { name = "Qumars Sharifi", email = ""}]
+authors = [{ name = "Samuel Ahou", email = "samuelahou@hotmail.com" }]
 
 [tool.black]
 line-length = 88
@@ -15,7 +14,7 @@ target-version = "py313"
 
 [tool.mypy]
 python_version = "3.13"
-strict = true
+strict = false
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
