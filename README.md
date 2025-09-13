@@ -27,6 +27,7 @@ quant-framework/
 ```
 
 ### Top-level files
+
 - **`pyproject.toml`** – project dependencies & tooling (black, ruff, mypy, pytest)  
 - **`README.md`** – this document  
 - **`.env.example`** – template for environment variables (API keys, DB URIs)  
@@ -38,12 +39,14 @@ quant-framework/
 ## Core Package (`src/qt/`)
 
 ### 📦 Core contracts
+
 - **`types.py`** – canonical dataclasses: Bar, Signal, Order, Fill, Position, PnL  
 - **`enums.py`** – finite sets: Side, OrderType, Interval, AssetClass, Venue  
 - **`utils/`** – helpers for time, math, logging, serialization  
 - **`config/settings.py`** – centralized config loader (YAML + env → Pydantic Settings)
 
 ### 📊 Data layer (`data/`)
+
 - **`providers/`** – vendor adapters (Binance, Polygon, Quandl, Filesystem)  
 - **`storage/`** – storage backends (Parquet, DuckDB, Postgres)  
 - **`schema.py`** – validation schemas (bars, trades, quotes, events, refdata)  
@@ -51,16 +54,19 @@ quant-framework/
 - **`pipelines/`** – ETL jobs: history backfills, daily refreshes  
 
 ### 🛠️ Features (`features/`)
+
 - **`engineering.py`** – rolling stats, returns, volatility, resampling  
 - **`signals/`** – alpha factor definitions (momentum, mean reversion, microstructure)  
 - **`labeling/`** – supervised learning targets (triple-barrier, forward returns)
 
 ### 📑 Strategies (`strategies/`)
+
 - **`base.py`** – strategy interface (on_data, on_fill, etc.)  
 - **`registry.py`** – strategy discovery / registration  
 - **Examples** – `mr_pairs.py`, `xmom_crosssec.py`
 
 ### 📐 Portfolio construction (`portfolio/`)
+
 - **`optimizers.py`** – convert signals → target weights (proportional, risk parity, Markowitz, BL)  
 - **`risk_models.py`** – covariance estimators, factor models  
 - **`constraints.py`** – leverage, sector caps, turnover limits  
@@ -68,12 +74,14 @@ quant-framework/
 - **`allocators.py`** – combine multiple strategies into one book (multi-strategy layer)
 
 ### ⚠️ Risk (`risk/`)
+
 - **`sizing.py`** – weights → quantities (shares/contracts), vol targeting  
 - **`limits.py`** – exposure limits, stop trading rules, kill switches  
 - **`models.py`** – VaR/ES models, drawdown tracking  
 - **`stress.py`** – scenario testing & shocks  
 
 ### 🔄 Backtesting (`backtest/`)
+
 - **`engine.py`** – deterministic event loop (bars → strategy → portfolio → orders → fills)  
 - **`execution_sim.py`** – fill models (VWAP, slippage, queue priority)  
 - **`slippage.py`, `costs.py`** – trading frictions  
@@ -81,6 +89,7 @@ quant-framework/
 - **`metrics.py`** – standardized performance stats  
 
 ### ⚡ Live trading (`live/`)
+
 - **`adapters/`** – broker/exchange integrations (Alpaca, IBKR, Binance)  
 - **`data_streams.py`** – websockets → normalized ticks/bars  
 - **`order_router.py`** – order routing, retries, idempotency  
@@ -89,21 +98,26 @@ quant-framework/
 - **`risk_guard.py`** – pre-trade checks, intraday risk limits, circuit breakers  
 
 ### 📈 Evaluation (`evaluation/`)
+
 - **`performance.py`** – return decomposition, factor analysis, drawdown stats  
 - **`tearsheet.py`** – HTML/PDF performance reports  
 
 ### 📢 Reporting & monitoring (`reporting/`)
+
 - **`reporters.py`** – notifications (Slack, email, alerts)  
 - **`dashboards/`** – Streamlit / FastAPI dashboards for live status & risk  
 
 ### 🗂️ Pipelines (`pipelines/`)
+
 - **`dags.py`**, **`tasks.py`** – orchestration (Prefect/Airflow jobs)  
 
 ### 🚀 API (`api/`)
+
 - **`cli.py`** – CLI entrypoints (`qt backtest`, `qt live`, `qt fetch`)  
 - **`server.py`** – optional FastAPI server (REST endpoints for jobs, health)  
 
 ### 🔌 Plugins (`plugins/`)
+
 - **`example_plugin.py`** – extension point for external strategies/data  
 
 ---

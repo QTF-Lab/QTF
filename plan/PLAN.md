@@ -175,6 +175,7 @@ This ensures reproducibility, clean abstractions, and minimal rewrites.
 ## Milestone — “Hello World” Pipeline
 
 After **Phase 9**:
+
 1. Run `scripts/run_backtest.py --strategy xmom_crosssec`.
 2. Engine logs each stage executed.
 3. Produces a dummy metrics dict and placeholder artifact.
