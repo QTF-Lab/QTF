@@ -17,4 +17,4 @@ venv/
 .idea/
 
 # OS
-.DS_Store
+.DS_Store.env
