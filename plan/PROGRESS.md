@@ -36,7 +36,7 @@ To establish the fundamental data structures (`types`) and categorical values (`
 
 The core data contracts were defined as simple, immutable dataclasses and enums, which are crucial for type safety and clarity.
 
-* **`src/qt/types.py`**: Defines the essential data structures like `TargetPositions`, `Bar`, `Signal`, `Order`, `Fill`, and `Position`. These act as the "nouns" of the system.
+* **`src/qt/types.py`**: Defines the essential data structures like `Bar`, `Signal`, `Order`, `Fill`, and `Position`. These act as the "nouns" of the system.
 * **`src/qt/enums.py`**: Defines finite sets of values like `Side`, `OrderType`, and `Interval`. Using enums prevents common errors associated with using plain strings.
 * **`src/qt/config/settings.py`**: A placeholder for the centralized configuration loader was created.
 
@@ -77,12 +77,12 @@ To define the architectural skeleton for where all alpha-generating logic will r
 The file and package structure for features, signals, and machine learning labeling has been created with placeholder functions.
 
 * **`src/qt/features/engineering.py`**: This file is intended for common, reusable feature calculations that can be shared across many strategies (e.g., `calculate_returns`, `calculate_sma`).
-* **`src/qt/features/signals/`**: A new package was created to house different families of alpha signals. Placeholder modules like `momentum.py` and `mean_reversion.py` were created to hold more specific signal functions (e.g., `calculate_zscore`).
-* **`src/qt/features/labeling/`**: A package for machine learning labeling techniques. The `triple_barrier.py` module was created as a placeholder for this advanced functionality.
+* **`src/qt/features/signals/`**: A new package was created to house different families of alpha signals. Placeholder modules like `momentum.py` and `mean_reversion.py` were created.
+* **`src/qt/features/labeling/`**: A package for machine learning labeling techniques, with a placeholder for the `triple_barrier.py` method.
 
 ### Use in Continuation
 
-This phase provides the necessary imports for **Phase 6 (Strategy Interface)**. Even though the functions are just stubs, their existence allows the strategy development to proceed based on a clear, stable API. Strategies will use these functions on bulk `DataFrames` to pre-calculate signals before the backtest simulation begins.
+This phase provides the necessary imports for **Phase 6 (Strategy Interface)**. Strategies will use these functions on bulk `DataFrames` to pre-calculate signals before the backtest simulation begins.
 
 ---
 
@@ -96,10 +96,33 @@ To freeze the communication "contract" between the trading engine and any user-d
 
 A formal strategy interface and a discovery mechanism have been created.
 
-* **`src/qt/strategies/base.py`**: Defines the abstract `Strategy` class. This is the core of the phase, specifying the essential methods (`initialize`, `on_data`) and the output data contract (`TargetPositions`) that every strategy must use to be compatible with the trading engine.
-* **`src/qt/strategies/registry.py`**: Implements a registry pattern with a `@register_strategy` decorator and a `get_strategy` function. This decouples the core engine from the specific strategy implementations, allowing strategies to be loaded by name from a config file.
-* **`src/qt/strategies/sma_crossover.py`**: Example strategy was created. It correctly inherits from the `Strategy` base class and registers itself with the registry, serving as a template for future development.
+* **`src/qt/strategies/base.py`**: Defines the abstract `Strategy` class, specifying the essential methods (`initialize`, `on_data`) and the output data contract (`TargetPositions`).
+* **`src/qt/strategies/registry.py`**: Implements a registry pattern (`@register_strategy`) to decouple the core engine from specific strategy implementations.
+* **`src/qt/strategies/xmom_crosssec.py` & `mr_pairs.py`**: Skeleton files for example strategies were created, serving as templates.
 
 ### Use in Continuation
 
-This interface is fundamental for all subsequent phases. The **Portfolio Construction (Phase 7)**, **Risk (Phase 8)**, and **Backtest Engine (Phase 9)** layers will all be built on the assumption that they will receive a `TargetPositions` dictionary from a class that conforms to this `Strategy` interface. The backtesting script will use `get_strategy("some_name")` to load a strategy and then drive the simulation by calling its `initialize()` and `on_data()` methods.
+This interface is fundamental for all subsequent phases. The **Backtest Engine (Phase 9)** will use `get_strategy()` to load a strategy, then call its `initialize()` and `on_data()` methods to receive the `TargetPositions` that will be passed to the portfolio layer.
+
+---
+
+## Phase 7 — Portfolio Construction
+
+### Goal
+
+To create the architectural layer responsible for translating a strategy's raw target weights into a final, optimized set of target weights, incorporating risk models and constraints.
+
+### Completed Work
+
+The package and module skeletons for the entire portfolio construction pipeline have been created, defining their APIs.
+
+* **`src/qt/portfolio/`**: A new package to house all portfolio-level logic.
+* **`src/qt/portfolio/optimizers.py`**: Defines the `Optimizer` abstract base class and a simple `PassThroughOptimizer`. This is where logic like mean-variance optimization will live.
+* **`src/qt/portfolio/risk_models.py`**: Defines the `RiskModel` abstract base class, which will be responsible for calculating covariance matrices.
+* **`src/qt/portfolio/constraints.py`**: Contains placeholders for functions that will enforce portfolio-level rules (e.g., max weight per asset).
+* **`src/qt/portfolio/rebalancing.py`**: Holds placeholders for logic that determines *when* to rebalance (e.g., on a fixed schedule or based on portfolio drift).
+* **`src/qt/portfolio/allocators.py`**: Includes stubs for multi-strategy allocation logic.
+
+### Use in Continuation
+
+This layer acts as the bridge between the strategy and the final execution logic. The **Backtest Engine (Phase 9)** will take the `TargetPositions` from the strategy and feed them into an `Optimizer` from this layer. The output—the final, optimized weights—will then be passed to the **Risk & Sizing layer (Phase 8)** to be converted into concrete orders.
