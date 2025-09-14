@@ -1,3 +1,4 @@
+
 # Quant Framework: Implementation Progress
 
 This document tracks the implementation progress of the Quant Framework, detailing the work completed in each phase and outlining how each component will be used in subsequent stages.
@@ -76,7 +77,7 @@ To define the architectural skeleton for where all alpha-generating logic will r
 
 The file and package structure for features, signals, and machine learning labeling has been created with placeholder functions.
 
-* **`src/qt/features/engineering.py`**: This file is intended for common, reusable feature calculations that can be shared across many strategies (e.g., `calculate_returns`, `calculate_sma`).
+* **`src/qt/features/engineering.py`**: This file is intended for common, reusable feature calculations that can be shared across many strategies.
 * **`src/qt/features/signals/`**: A new package was created to house different families of alpha signals. Placeholder modules like `momentum.py` and `mean_reversion.py` were created.
 * **`src/qt/features/labeling/`**: A package for machine learning labeling techniques, with a placeholder for the `triple_barrier.py` method.
 
@@ -118,7 +119,7 @@ The package and module skeletons for the entire portfolio construction pipeline 
 
 * **`src/qt/portfolio/`**: A new package to house all portfolio-level logic.
 * **`src/qt/portfolio/optimizers.py`**: Defines the `Optimizer` abstract base class and a simple `PassThroughOptimizer`.
-* **`src/qt/portfolio/risk_models.py`**: Defines the `RiskModel` abstract base class, which will be responsible for calculating covariance matrices.
+* **`src/qt/portfolio/risk_models.py`**: Defines the `RiskModel` abstract base class for calculating covariance matrices.
 * **`src/qt/portfolio/constraints.py`**: Contains placeholders for functions that will enforce portfolio-level rules.
 * **`src/qt/portfolio/rebalancing.py`**: Holds placeholders for logic that determines *when* to rebalance.
 * **`src/qt/portfolio/allocators.py`**: Includes stubs for multi-strategy allocation logic.
@@ -140,14 +141,14 @@ To create the final architectural layer that converts an optimized portfolio blu
 The file and package structure for the entire risk and order generation pipeline has been created with placeholder functions.
 
 * **`src/qt/risk/`**: A new package to house all risk management logic.
-* **`src/qt/risk/sizing.py`**: Contains the function stubs (`calculate_target_quantities`, `generate_orders`) responsible for the core logic of converting target weights into the final list of `Orders`.
-* **`src/qt/risk/limits.py`**: Includes placeholders for pre-trade and post-trade risk checks (e.g., max exposure, drawdown limits), acting as the final safety layer before execution.
-* **`src/qt/risk/models.py`**: Holds stubs for portfolio-level risk metrics like Value-at-Risk (VaR) for ongoing monitoring.
+* **`src/qt/risk/sizing.py`**: Contains the function stubs responsible for the core logic of converting target weights into the final list of `Orders`.
+* **`src/qt/risk/limits.py`**: Includes placeholders for pre-trade and post-trade risk checks, acting as the final safety layer.
+* **`src/qt/risk/models.py`**: Holds stubs for portfolio-level risk metrics like Value-at-Risk (VaR).
 * **`src/qt/risk/stress.py`**: Includes stubs for simulating portfolio performance under extreme market scenarios.
 
 ### Use in Continuation
 
-This is the final component in the pre-trade pipeline. The **Backtest Engine (Phase 9)** will call this layer after the Portfolio Construction layer. It will take the optimized weights, the current portfolio state, and market prices as input. Its output—the final `List[Order]`—is what will be sent to the execution simulator to be filled.
+This is the final component in the pre-trade pipeline. The **Backtest Engine (Phase 9)** will call this layer after the Portfolio Construction layer. Its output—the final `List[Order]`—is what will be sent to the execution simulator to be filled.
 
 ---
 
@@ -159,20 +160,61 @@ To create the central orchestrator of the framework: a deterministic, event-driv
 
 ### Completed Work
 
-The architectural skeleton for the entire backtesting pipeline has been created, achieving the "Hello World" milestone from the `PLAN.md`.
+The architectural skeleton for the entire backtesting pipeline has been created, achieving the "Hello World" milestone.
 
-* **`src/qt/backtest/`**: A new package was created to house all components related to simulation.
-* **`src/qt/backtest/engine.py`**: Defines the main `BacktestEngine` class. This is the heart of the simulation, containing the high-level logic for the event loop that drives the entire process.
-* **`src/qt/backtest/portfolio.py`**: Defines the stateful `Portfolio` class, which is responsible for tracking cash, positions, and calculating the portfolio's Net Asset Value (NAV) over time.
-* **`src/qt/backtest/execution_sim.py`**: Defines the `ExecutionSimulator` class, which is responsible for taking `Order` objects and generating realistic `Fill` events, considering market conditions.
-* **`src/qt/backtest/slippage.py` & `costs.py`**: These modules define the interfaces for modeling real-world trading frictions like slippage and commissions.
-* **`src/qt/backtest/metrics.py`**: Contains placeholder functions for calculating final performance statistics like the Sharpe Ratio and Maximum Drawdown from the portfolio's equity curve.
-* **`scripts/run_backtest.py`**: A user-facing command-line script was created. This script is the final entry point that loads a strategy by name, initializes all the necessary backtesting components, and runs the engine.
+* **`src/qt/backtest/`**: A new package to house all components related to simulation.
+* **`src/qt/backtest/engine.py`**: Defines the main `BacktestEngine` class, containing the high-level logic for the event loop.
+* **`src/qt/backtest/portfolio.py`**: Defines the stateful `Portfolio` class for tracking cash, positions, and NAV.
+* **`src/qt/backtest/execution_sim.py`**: Defines the `ExecutionSimulator` class for generating `Fill` events from `Orders`.
+* **`src/qt/backtest/slippage.py` & `costs.py`**: Modules defining interfaces for modeling trading frictions.
+* **`src/qt/backtest/metrics.py`**: Contains placeholder functions for calculating final performance statistics.
+* **`scripts/run_backtest.py`**: A user-facing command-line script that loads a strategy and runs the engine.
 
 ### Use in Continuation
 
-This phase provides the complete, runnable skeleton of the trading system. The next major step is to begin filling in the `NotImplementedError` stubs within these modules. This involves:
-1.  Implementing the data loading logic (Phases 3 & 4) so that `historical_data` is populated.
-2.  Implementing the core event loop in `engine.py` to iterate through time.
-3.  Implementing the state update logic in `portfolio.py` and the fill simulation in `execution_sim.py`.
-4.  Once the simulation runs and produces an equity curve, the `metrics.py` functions can be implemented to generate the final performance report.
+This phase provides the complete, runnable skeleton of the trading system. The next major step is to begin filling in the `NotImplementedError` stubs within these modules to bring the simulation to life.
+
+---
+
+## Phase 10 — Evaluation & Reporting
+
+### Goal
+
+To define and structure the outputs of the research and backtesting process, enabling deep analysis and clear communication of results.
+
+### Completed Work
+
+The architectural skeletons for performance analysis, visual reporting, and notifications have been created.
+
+* **`src/qt/evaluation/performance.py`**: A library for advanced performance calculations beyond the basic metrics.
+* **`src/qt/evaluation/tearsheet.py`**: A module designed to generate comprehensive visual reports (tearsheets) from backtest results.
+* **`src/qt/reporting/reporters.py`**: Skeletons for sending notifications, for example, to Slack or email upon backtest completion.
+* **`scripts/make_tearsheet.py`**: A user-facing script to generate a report from a saved backtest artifact.
+
+### Use in Continuation
+
+After the backtest engine (Phase 9) is fully implemented and produces a results artifact (e.g., a file containing the equity curve and trade list), the functions and scripts in this phase will be used to analyze and visualize those results, completing the research cycle.
+
+---
+
+## Phase 11 — Live Trading Surface
+
+### Goal
+
+To create the "live twin" of the backtest engine, allowing a strategy to be deployed in a real-time trading environment with minimal changes.
+
+### Completed Work
+
+The complete architectural skeleton for the live trading engine and its components has been created.
+
+* **`src/qt/live/exec_engine.py`**: Defines the `LiveTradingEngine`, which will host the event loop driven by real-time market data.
+* **`src/qt/live/data_streams.py`**: Defines the interface for connecting to live broker data feeds.
+* **`src/qt/live/order_router.py`**: Defines the interface for sending orders to a broker and managing their lifecycle.
+* **`src/qt/live/state_store.py`**: Defines the interface for a persistent state manager (e.g., Redis, PostgreSQL) to ensure positions are not lost on restart.
+* **`src/qt/live/risk_guard.py`**: A final, live pre-trade risk check module.
+* **`src/qt/live/adapters/`**: A package to hold broker-specific implementations.
+* **`scripts/run_live.py`**: A user-facing script to launch a strategy in a live environment.
+
+### Use in Continuation
+
+This is the final deployment layer. Once a strategy has been thoroughly vetted through backtesting (Phase 9) and evaluation (Phase 10), the `run_live.py` script will be used to launch it. The live engine will use the exact same `Strategy`, `Portfolio`, and `Risk` components, but will swap out the historical data feed and execution simulator for live broker connections via the `adapters`.
