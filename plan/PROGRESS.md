@@ -117,12 +117,34 @@ To create the architectural layer responsible for translating a strategy's raw t
 The package and module skeletons for the entire portfolio construction pipeline have been created, defining their APIs.
 
 * **`src/qt/portfolio/`**: A new package to house all portfolio-level logic.
-* **`src/qt/portfolio/optimizers.py`**: Defines the `Optimizer` abstract base class and a simple `PassThroughOptimizer`. This is where logic like mean-variance optimization will live.
+* **`src/qt/portfolio/optimizers.py`**: Defines the `Optimizer` abstract base class and a simple `PassThroughOptimizer`.
 * **`src/qt/portfolio/risk_models.py`**: Defines the `RiskModel` abstract base class, which will be responsible for calculating covariance matrices.
-* **`src/qt/portfolio/constraints.py`**: Contains placeholders for functions that will enforce portfolio-level rules (e.g., max weight per asset).
-* **`src/qt/portfolio/rebalancing.py`**: Holds placeholders for logic that determines *when* to rebalance (e.g., on a fixed schedule or based on portfolio drift).
+* **`src/qt/portfolio/constraints.py`**: Contains placeholders for functions that will enforce portfolio-level rules.
+* **`src/qt/portfolio/rebalancing.py`**: Holds placeholders for logic that determines *when* to rebalance.
 * **`src/qt/portfolio/allocators.py`**: Includes stubs for multi-strategy allocation logic.
 
 ### Use in Continuation
 
-This layer acts as the bridge between the strategy and the final execution logic. The **Backtest Engine (Phase 9)** will take the `TargetPositions` from the strategy and feed them into an `Optimizer` from this layer. The output—the final, optimized weights—will then be passed to the **Risk & Sizing layer (Phase 8)** to be converted into concrete orders.
+This layer acts as the bridge between the strategy and the final execution logic. The **Backtest Engine (Phase 9)** will take the `TargetPositions` from the strategy and feed them into an `Optimizer`. The output will then be passed to the **Risk & Sizing layer (Phase 8)**.
+
+---
+
+## Phase 8 — Risk (sizing & limits)
+
+### Goal
+
+To create the final architectural layer that converts an optimized portfolio blueprint (`TargetPositions`) into concrete, tradable `Orders`, while enforcing absolute, real-world risk limits.
+
+### Completed Work
+
+The file and package structure for the entire risk and order generation pipeline has been created with placeholder functions.
+
+* **`src/qt/risk/`**: A new package to house all risk management logic.
+* **`src/qt/risk/sizing.py`**: Contains the function stubs (`calculate_target_quantities`, `generate_orders`) responsible for the core logic of converting target weights into the final list of `Orders`.
+* **`src/qt/risk/limits.py`**: Includes placeholders for pre-trade and post-trade risk checks (e.g., max exposure, drawdown limits), acting as the final safety layer before execution.
+* **`src/qt/risk/models.py`**: Holds stubs for portfolio-level risk metrics like Value-at-Risk (VaR) for ongoing monitoring.
+* **`src/qt/risk/stress.py`**: Includes stubs for simulating portfolio performance under extreme market scenarios.
+
+### Use in Continuation
+
+This is the final component in the pre-trade pipeline. The **Backtest Engine (Phase 9)** will call this layer after the Portfolio Construction layer. It will take the optimized weights, the current portfolio state, and market prices as input. Its output—the final `List[Order]`—is what will be sent to the execution simulator to be filled.
