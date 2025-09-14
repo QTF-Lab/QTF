@@ -1,0 +1,6 @@
+strategy:
+  name: "sma_crossover"
+  params:
+    universe: ["AAPL"]
+    short_window: 20
+    long_window: 50
