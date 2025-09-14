@@ -148,3 +148,31 @@ The file and package structure for the entire risk and order generation pipeline
 ### Use in Continuation
 
 This is the final component in the pre-trade pipeline. The **Backtest Engine (Phase 9)** will call this layer after the Portfolio Construction layer. It will take the optimized weights, the current portfolio state, and market prices as input. Its output—the final `List[Order]`—is what will be sent to the execution simulator to be filled.
+
+---
+
+## Phase 9 — Backtest Engine
+
+### Goal
+
+To create the central orchestrator of the framework: a deterministic, event-driven engine that simulates a strategy's performance over historical data by wiring together all previously built components.
+
+### Completed Work
+
+The architectural skeleton for the entire backtesting pipeline has been created, achieving the "Hello World" milestone from the `PLAN.md`.
+
+* **`src/qt/backtest/`**: A new package was created to house all components related to simulation.
+* **`src/qt/backtest/engine.py`**: Defines the main `BacktestEngine` class. This is the heart of the simulation, containing the high-level logic for the event loop that drives the entire process.
+* **`src/qt/backtest/portfolio.py`**: Defines the stateful `Portfolio` class, which is responsible for tracking cash, positions, and calculating the portfolio's Net Asset Value (NAV) over time.
+* **`src/qt/backtest/execution_sim.py`**: Defines the `ExecutionSimulator` class, which is responsible for taking `Order` objects and generating realistic `Fill` events, considering market conditions.
+* **`src/qt/backtest/slippage.py` & `costs.py`**: These modules define the interfaces for modeling real-world trading frictions like slippage and commissions.
+* **`src/qt/backtest/metrics.py`**: Contains placeholder functions for calculating final performance statistics like the Sharpe Ratio and Maximum Drawdown from the portfolio's equity curve.
+* **`scripts/run_backtest.py`**: A user-facing command-line script was created. This script is the final entry point that loads a strategy by name, initializes all the necessary backtesting components, and runs the engine.
+
+### Use in Continuation
+
+This phase provides the complete, runnable skeleton of the trading system. The next major step is to begin filling in the `NotImplementedError` stubs within these modules. This involves:
+1.  Implementing the data loading logic (Phases 3 & 4) so that `historical_data` is populated.
+2.  Implementing the core event loop in `engine.py` to iterate through time.
+3.  Implementing the state update logic in `portfolio.py` and the fill simulation in `execution_sim.py`.
+4.  Once the simulation runs and produces an equity curve, the `metrics.py` functions can be implemented to generate the final performance report.
