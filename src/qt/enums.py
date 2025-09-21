@@ -40,6 +40,7 @@ class Interval(str, Enum):
     I5M = "5m"
     I15M = "15m"
     I1H = "1h"
+    I4H = "4h"
     I1D = "1d"
 
 
