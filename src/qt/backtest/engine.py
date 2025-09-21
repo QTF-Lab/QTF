@@ -47,6 +47,10 @@ class BacktestEngine:
         """
         logger.info("--- Starting Backtest ---")
 
+        logger.info("Initializing strategy with historical data...")
+        self.strategy.initialize(self.data_handler.historical_data)
+        logger.info("Strategy initialized.")
+
         # 1. Populate the event queue with market data
         self.data_handler.update_data()
 

@@ -1,146 +1,88 @@
-# src/qt/strategies/sma_crossover.py
 """
 A classic Simple Moving Average (SMA) Crossover strategy.
 """
 from __future__ import annotations
-import uuid
-from typing import List, Dict, Any
+from typing import Dict, Any
 import pandas as pd
+import numpy as np
 
-# Import the core building blocks from your framework
-from qt.enums import OrderType, Side
-from qt.types import Bar, Order
-from qt.features.engineering import calculate_sma  # Assuming this will be implemented
-
+from qt.events import BarEvent
+from qt.types import TargetPositions
+from qt.features.engineering import calculate_sma
+from qt.utils.logger import get_logger
 from .base import Strategy
 from .registry import register_strategy
 
-
-def _generate_order_id() -> str:
-    """Generates a unique order ID."""
-    return str(uuid.uuid4())
-
+logger = get_logger(__name__)
 
 @register_strategy("sma_crossover")
 class SmaCrossoverStrategy(Strategy):
     """
     Trades based on the crossover of two SMAs.
-    - Enters a long position when the fast SMA crosses above the slow SMA.
-    - Flattens the position when the fast SMA crosses below the slow SMA.
+    - Signals a long position (weight=1.0) when the fast SMA crosses above the slow SMA.
+    - Signals a flat position (weight=0.0) when the fast SMA crosses below.
     """
 
     def __init__(self, params: Dict[str, Any] | None = None) -> None:
         """
         Initializes the strategy.
-        Expected params: 'symbol', 'fast_window', 'slow_window'.
+        Expected params: 'universe', 'fast_window', 'slow_window'.
         """
         super().__init__(params)
-        # --- Parameters ---
-        self.symbol = self.params.get("symbol", "SPY")  # Default to SPY
         self.fast_window = self.params.get("fast_window", 20)
         self.slow_window = self.params.get("slow_window", 50)
+        # This is a single-asset strategy, so it operates on the first symbol in its universe
+        self.traded_symbol = self.universe[0]
 
-        # --- Strategy State ---
-        # Stores the pre-computed signals. This is our "lookup table".
-        self.signals: pd.DataFrame | None = None
-        # Tracks our current position: 0 for flat, 1 for long.
-        self.current_position: int = 0
+        if self.fast_window >= self.slow_window:
+            raise ValueError("Fast window must be smaller than slow window.")
 
-    def initialize(self, historical_data: Dict[str, pd.DataFrame]) -> None:
+    def initialize(self, historical_data: pd.DataFrame) -> None:
         """
-        1.  This is where we do the heavy, vectorized calculations.
-        2.  It's called only ONCE at the start of the backtest.
+        Pre-calculates the moving averages and the trading signal.
+        The strategy is responsible for filtering the data for the symbol it needs.
         """
-        print(f"[{self.__class__.__name__}] Initializing and calculating signals for {self.symbol}...")
+        logger.info(f"[{self.__class__.__name__}] Calculating signals for {self.traded_symbol}...")
 
-        # Get the historical data for the symbol we care about
-        bars_df = historical_data[self.symbol]
-
-        # --- Vectorized Signal Calculation ---
-        # Use pandas to efficiently calculate SMAs over the entire dataset at once.
+        # Filter the main DataFrame to get the data for the symbol we care about
+        bars_df = historical_data[historical_data["symbol"] == self.traded_symbol]
+        
         fast_sma = calculate_sma(bars_df["close"], window=self.fast_window)
         slow_sma = calculate_sma(bars_df["close"], window=self.slow_window)
 
-        # Create a DataFrame to hold our signals
         signals_df = pd.DataFrame(index=bars_df.index)
-        signals_df["fast_sma"] = fast_sma
-        signals_df["slow_sma"] = slow_sma
-
-        # The signal is 1 if fast > slow, and 0 otherwise.
-        # np.where is a fast, vectorized way to do this conditional logic.
-        signals_df["signal"] = 0
-        signals_df.loc[fast_sma > slow_sma, "signal"] = 1
-        signals_df.loc[fast_sma <= slow_sma, "signal"] = 0 # Explicitly set exit signal
-
-        # Store the computed signals DataFrame for later use in on_data
+        signals_df["signal"] = np.where(fast_sma > slow_sma, 1, 0)
+        signals_df["signal"] = signals_df["signal"].diff()
+        
         self.signals = signals_df
-        print(f"[{self.__class__.__name__}] Signal calculation complete.")
+        logger.info("Signal calculation complete.")
 
-    def on_bar(self, data_event: Bar) -> List[Order]:
+    def on_data(self, bar_event: BarEvent) -> TargetPositions:
         """
-        1.  This is the event-driven part of the strategy.
-        2.  It's called for EVERY SINGLE BAR in the backtest, one by one.
-        3.  It should be very fast and avoid heavy calculations.
+        This is the event-driven part. It looks up the pre-computed signal
+        for the current timestamp and emits a target position.
         """
-        orders_to_place: List[Order] = []
+        targets: TargetPositions = {}
+        
+        if self.traded_symbol not in bar_event.bars:
+            return targets
 
-        # Ignore events for other symbols (if any)
-        if data_event.symbol != self.symbol:
-            return orders_to_place
-
-        # Get the current timestamp from the incoming bar event
-        current_timestamp = data_event.ts_utc
-
+        current_timestamp = bar_event.timestamp
+        
         try:
-            # --- Fast Signal Lookup ---
-            # Look up the pre-computed signal for this exact moment in time.
-            # This is much faster than recalculating the SMA on every bar.
-            signal_value = self.signals.loc[current_timestamp, "signal"]
-        except KeyError:
-            # This can happen at the start of the backtest before the SMA
-            # windows are filled. We just do nothing.
-            return orders_to_place
+            signal_change = self.signals.loc[current_timestamp, "signal"]
+        except (KeyError, IndexError):
+            return targets
 
-        # --- Trading Logic ---
-        # 1. Bullish Crossover: Signal is 1 and we are currently flat (0).
-        if signal_value == 1 and self.current_position == 0:
-            print(f"{current_timestamp}: Bullish crossover detected. Placing BUY order for {self.symbol}.")
-            # Create a market order to buy 100 shares
-            new_order = Order(
-                id=_generate_order_id(),
-                ts_utc=current_timestamp,
-                symbol=self.symbol,
-                side=Side.BUY,
-                qty=100.0,
-                type=OrderType.MARKET,
-            )
-            orders_to_place.append(new_order)
-            self.current_position = 1  # Update our state to show we are now long
+        if pd.isna(signal_change):
+            return targets
 
-        # 2. Bearish Crossover: Signal is 0 and we are currently long (1).
-        elif signal_value == 0 and self.current_position == 1:
-            print(f"{current_timestamp}: Bearish crossover detected. Placing SELL order for {self.symbol} to flatten position.")
-            # Create a market order to sell 100 shares (to close our long)
-            new_order = Order(
-                id=_generate_order_id(),
-                ts_utc=current_timestamp,
-                symbol=self.symbol,
-                side=Side.SELL,
-                qty=100.0,
-                type=OrderType.MARKET,
-            )
-            orders_to_place.append(new_order)
-            self.current_position = 0  # Update our state to show we are now flat
+        if signal_change > 0:
+            logger.info(f"{current_timestamp} | Bullish crossover detected for {self.traded_symbol}. Target: 100%")
+            targets[self.traded_symbol] = 1.0
+        elif signal_change < 0:
+            logger.info(f"{current_timestamp} | Bearish crossover detected for {self.traded_symbol}. Target: 0%")
+            targets[self.traded_symbol] = 0.0
 
-        # Return the list of orders for the engine to execute
-        return orders_to_place
+        return targets
 
-    def on_fill(self, fill_event: Fill) -> None:
-        """
-        When the backtest engine confirms our order was filled, this is called.
-        We could use it to track our position more accurately if needed.
-        """
-        print(
-            f"Received fill confirmation: {fill_event.side} {fill_event.qty} "
-            f"{fill_event.symbol} @ {fill_event.price}"
-        )

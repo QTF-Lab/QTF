@@ -6,7 +6,8 @@ from abc import ABC, abstractmethod
 from typing import List, Dict, Any
 import pandas as pd
 
-from qt.types import Bar, Fill, Order, TargetPositions
+from qt.events import BarEvent
+from qt.types import Fill, Order, TargetPositions
 
 
 class Strategy(ABC):
@@ -18,35 +19,28 @@ class Strategy(ABC):
     def __init__(self, params: Dict[str, Any] | None = None) -> None:
         """
         Initializes the strategy with a set of parameters.
-
-        The `params` dictionary is expected to contain configuration for the
-        strategy, including the 'universe' of symbols it should operate on.
         """
         self.params = params or {}
-
         self.universe: List[str] = self.params.get("universe", [])
         if not self.universe:
             raise ValueError("Strategy must be initialized with a non-empty 'universe' in its parameters.")
-
         self.signals: pd.DataFrame | None = None
 
-
     @abstractmethod
-    def initialize(self, historical_data: Dict[str, pd.DataFrame]) -> None:
+    def initialize(self, historical_data: pd.DataFrame) -> None:
         """
         Called once at the start to pre-calculate signals.
 
-        The `historical_data` dictionary will be pre-filtered by the engine
-        to contain only the symbols defined in the strategy's universe.
+        Args:
+            historical_data: A single DataFrame containing the historical
+                             bar data for all symbols in the universe.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def on_data(self, data_event: Bar) -> TargetPositions:
+    def on_data(self, bar_event: BarEvent) -> TargetPositions:
         """
-        Called for each new market data event.
-
-        The strategy should only react to events for symbols within its universe.
+        Called by the engine for each new market data event.
         """
         raise NotImplementedError
 
