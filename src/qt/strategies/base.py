@@ -42,7 +42,7 @@ class Strategy(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def on_bar(self, data_event: Bar) -> TargetPositions:
+    def on_data(self, data_event: Bar) -> TargetPositions:
         """
         Called for each new market data event.
 

@@ -1,4 +1,3 @@
-
 # Quant Framework: Implementation Progress
 
 This document tracks the implementation progress of the Quant Framework, detailing the work completed in each phase and outlining how each component will be used in subsequent stages.
@@ -152,27 +151,30 @@ This is the final component in the pre-trade pipeline. The **Backtest Engine (Ph
 
 ---
 
-## Phase 9 — Backtest Engine
+## Phase 9 — Backtest Engine Implementation
 
 ### Goal
 
-To create the central orchestrator of the framework: a deterministic, event-driven engine that simulates a strategy's performance over historical data by wiring together all previously built components.
+To implement and test the core components of the deterministic, event-driven backtesting engine, bringing the simulation to life.
 
 ### Completed Work
 
-The architectural skeleton for the entire backtesting pipeline has been created, achieving the "Hello World" milestone.
+This phase has moved beyond architectural skeletons to a fully implemented and tested simulation core.
 
-* **`src/qt/backtest/`**: A new package to house all components related to simulation.
-* **`src/qt/backtest/engine.py`**: Defines the main `BacktestEngine` class, containing the high-level logic for the event loop.
-* **`src/qt/backtest/portfolio.py`**: Defines the stateful `Portfolio` class for tracking cash, positions, and NAV.
-* **`src/qt/backtest/execution_sim.py`**: Defines the `ExecutionSimulator` class for generating `Fill` events from `Orders`.
-* **`src/qt/backtest/slippage.py` & `costs.py`**: Modules defining interfaces for modeling trading frictions.
-* **`src/qt/backtest/metrics.py`**: Contains placeholder functions for calculating final performance statistics.
-* **`scripts/run_backtest.py`**: A user-facing command-line script that loads a strategy and runs the engine.
+* **`src/qt/events.py`**: A robust, batch-oriented event system (`BarEvent`, `OrderEvent`, `FillEvent`) was designed and implemented to ensure correct chronological processing of multi-asset data.
+* **`src/qt/backtest/event_queue.py`**: A time-based priority queue was implemented using `heapq` to drive the entire event loop.
+* **`src/qt/backtest/data_handler.py`**: A stateful data handler was fully implemented. It correctly processes historical data, generates bundled `BarEvent` objects, and provides strategies with a point-in-time, lookahead-bias-safe view of the market.
+* **`src/qt/backtest/portfolio.py`**: The stateful `Portfolio` class was fully implemented. Its accounting logic correctly handles opening, closing, and flipping both long and short positions while tracking cash and realized P&L.
+* **`src/qt/backtest/execution_sim.py`**: A stateful `ExecutionSimulator` was implemented. It correctly simulates the filling of both `MARKET` and `LIMIT` orders by maintaining an internal book of open limit orders.
+* **`src/qt/backtest/engine.py`**: The main `BacktestEngine` was implemented. Its event loop correctly orchestrates all the above components, routing events to the appropriate handlers. A simplified order generation logic was included as a placeholder for the full Phase 7/8 pipeline.
+* **`tests/`**: The core components (`DataHandler`, `Portfolio`, `ExecutionSimulator`) are all covered by comprehensive unit tests. A full end-to-end integration test (`test_backtest_engine.py`) was written and passed, verifying that the entire pipeline works as expected.
 
 ### Use in Continuation
 
-This phase provides the complete, runnable skeleton of the trading system. The next major step is to begin filling in the `NotImplementedError` stubs within these modules to bring the simulation to life.
+The core simulation engine is now complete and verified. The immediate next steps are to replace the placeholder components with real logic:
+1.  Integrate the real **Data Layer (Phases 3 & 4)** to feed the engine with actual historical data.
+2.  Implement real alpha logic in the **Strategy classes (Phase 6)**.
+3.  Replace the simplified order generation in the engine with the full **Portfolio Construction and Risk Management pipeline (Phases 7 & 8)**.
 
 ---
 
@@ -193,7 +195,7 @@ The architectural skeletons for performance analysis, visual reporting, and noti
 
 ### Use in Continuation
 
-After the backtest engine (Phase 9) is fully implemented and produces a results artifact (e.g., a file containing the equity curve and trade list), the functions and scripts in this phase will be used to analyze and visualize those results, completing the research cycle.
+After a backtest is run with real data and strategies, the resulting equity curve and trade logs will be fed into the functions in this phase to analyze performance and generate reports, completing the research cycle.
 
 ---
 
@@ -210,11 +212,11 @@ The complete architectural skeleton for the live trading engine and its componen
 * **`src/qt/live/exec_engine.py`**: Defines the `LiveTradingEngine`, which will host the event loop driven by real-time market data.
 * **`src/qt/live/data_streams.py`**: Defines the interface for connecting to live broker data feeds.
 * **`src/qt/live/order_router.py`**: Defines the interface for sending orders to a broker and managing their lifecycle.
-* **`src/qt/live/state_store.py`**: Defines the interface for a persistent state manager (e.g., Redis, PostgreSQL) to ensure positions are not lost on restart.
+* **`src/qt/live/state_store.py`**: Defines the interface for a persistent state manager to ensure positions are not lost on restart.
 * **`src/qt/live/risk_guard.py`**: A final, live pre-trade risk check module.
 * **`src/qt/live/adapters/`**: A package to hold broker-specific implementations.
 * **`scripts/run_live.py`**: A user-facing script to launch a strategy in a live environment.
 
 ### Use in Continuation
 
-This is the final deployment layer. Once a strategy has been thoroughly vetted through backtesting (Phase 9) and evaluation (Phase 10), the `run_live.py` script will be used to launch it. The live engine will use the exact same `Strategy`, `Portfolio`, and `Risk` components, but will swap out the historical data feed and execution simulator for live broker connections via the `adapters`.
+This is the final deployment layer. Once a strategy has been thoroughly vetted through backtesting, the `run_live.py` script will be used to launch it. The live engine will use the exact same `Strategy`, `Portfolio`, and `Risk` components, but will swap out the historical data feed and execution simulator for live broker connections via the `adapters`.

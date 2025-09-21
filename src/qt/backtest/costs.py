@@ -10,7 +10,7 @@ from qt.types import Fill
 class CostModel(ABC):
     """Abstract base class for a trading cost model."""
 
-    @abstractabstractmethod
+    @abstractmethod
     def calculate_fee(self, fill: Fill) -> float:
         """Calculates the fee for a given fill."""
         raise NotImplementedError

@@ -37,70 +37,81 @@ class Portfolio:
     def update_on_fill(self, fill_event: FillEvent) -> None:
         """
         Updates the portfolio's state after an order has been filled.
+        This version correctly handles opening, increasing, reducing,
+        closing, and flipping positions using a signed quantity.
         """
         for fill in fill_event.fills:
             symbol = fill.symbol
-            
-            # Calculate the cost of the trade
-            trade_cost = fill.qty * fill.price
-            
-            # Update cash
-            if fill.side == "BUY":
-                self.cash -= trade_cost
-            else: # SELL
-                self.cash += trade_cost
-            
-            # Apply fees
+            trade_value = fill.qty * fill.price # This will be negative for buys, positive for sells
+
+            # Update cash based on the trade
+            self.cash -= trade_value
             self.cash -= fill.fee
 
-            # Update or create the position
+            # --- Position Update Logic ---
             if symbol not in self.positions:
-                # Open a new position
-                new_position = Position(
-                    symbol=symbol,
-                    qty=fill.qty,
-                    avg_price=fill.price,
-                )
+                # 1. Open a new position
+                new_position = Position(symbol=symbol, qty=fill.qty, avg_price=fill.price)
                 self.positions[symbol] = new_position
             else:
-                # Update an existing position
+                # 2. Update an existing position
                 existing_position = self.positions[symbol]
                 
-                # Update average price if it's a buy into an existing long, or a sell into a short
-                # This is a simplification; a real implementation would handle more complex cases
-                if (existing_position.qty > 0 and fill.side == "BUY") or \
-                   (existing_position.qty < 0 and fill.side == "SELL"):
-                    total_qty = existing_position.qty + fill.qty
-                    total_cost = (existing_position.avg_price * existing_position.qty) + trade_cost
-                    existing_position.avg_price = total_cost / total_qty
-                
-                existing_position.qty += fill.qty
+                # Check if the trade is in the same direction as the existing position
+                is_same_direction = (existing_position.qty * fill.qty) > 0
 
-            # If a position's quantity is now zero, remove it
-            if self.positions[symbol].qty == 0:
-                del self.positions[symbol]
-                
-            logger.info(f"Processed fill: {fill.side} {fill.qty} {fill.symbol} @ ${fill.price:.2f}")
+                if is_same_direction:
+                    # -- Increasing the position --
+                    total_qty = existing_position.qty + fill.qty
+                    total_value = (existing_position.avg_price * existing_position.qty) + (fill.price * fill.qty)
+                    existing_position.avg_price = total_value / total_qty
+                    existing_position.qty = total_qty
+                else:
+                    # -- Reducing, closing, or flipping the position --
+                    position_direction = 1 if existing_position.qty > 0 else -1
+                    
+                    if abs(fill.qty) < abs(existing_position.qty):
+                        # -- Partially closing the position --
+                        qty_closed = abs(fill.qty)
+                        pnl = position_direction * (fill.price - existing_position.avg_price) * qty_closed
+                        existing_position.realized_pnl += pnl
+                        existing_position.qty += fill.qty
+                    else:
+                        # -- Fully closing and potentially flipping the position --
+                        qty_closed = abs(existing_position.qty)
+                        pnl = position_direction * (fill.price - existing_position.avg_price) * qty_closed
+                        existing_position.realized_pnl += pnl
+                        
+                        remaining_qty = fill.qty + existing_position.qty
+                        
+                        if remaining_qty == 0:
+                            del self.positions[symbol]
+                        else:
+                            # Position is flipped
+                            existing_position.qty = remaining_qty
+                            existing_position.avg_price = fill.price
+            
+            side_log = "BUY" if fill.qty > 0 else "SELL"
+            side_log = f"{side_log:<4}"
+            qty_log = abs(fill.qty)
+            logger.info(f"Processed fill: {side_log} {qty_log:<5} {fill.symbol:<5} @ ${fill.price:<8.2f} | Cash: ${self.cash:,.2f}")
 
     def record_snapshot(self, timestamp: datetime, latest_prices: Dict[str, float]) -> None:
         """
         Records the current state (NAV, cash, positions) of the portfolio.
         """
-        # 1. Calculate the market value of all current positions
         market_value = 0.0
         for symbol, position in self.positions.items():
-            price = latest_prices.get(symbol, position.avg_price) # Use last known price if no update
+            price = latest_prices.get(symbol, position.avg_price)
             market_value += position.qty * price
 
-        # 2. Calculate Net Asset Value (NAV)
         nav = self.cash + market_value
 
-        # 3. Create and store the snapshot
         snapshot = PortfolioSnapshot(
             ts_utc=timestamp,
             nav=nav,
             cash=self.cash,
-            positions=self.positions.copy(), # Important to copy
+            positions=self.positions.copy(),
         )
         self.history.append(snapshot)
 
